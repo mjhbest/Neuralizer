@@ -6,7 +6,6 @@ import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
 from baselines.ft import FTHyperParams, apply_ft_to_model
-from memit import MEMITHyperParams, apply_memit_to_model
 from rome import ROMEHyperParams, apply_rome_to_model
 from util import nethook
 from util.generate import generate_fast
@@ -48,11 +47,7 @@ def demo_model_editing(
 
     print_loud(f"Applying {alg_name} to model")
     model_new, orig_weights = apply_method(
-        model,
-        tok,
-        requests,
-        hparams,
-        return_orig_weights=True,
+        model, tok, requests, hparams, return_orig_weights=True
     )
 
     print_loud("Generating post-update text")
@@ -94,17 +89,17 @@ def load_alg(alg_name):
         "FT",
         "FT-L",
         "FT-AttnEdit",
+        "KN",
         "MEND",
         "MEND-CF",
         "MEND-zsRE",
+        "KE",
+        "KE-CF",
         "ROME",
-        "MEMIT",
     ]
 
     if alg_name == "ROME":
         return ROMEHyperParams, apply_rome_to_model, "ROME", ""
-    elif alg_name == "MEMIT":
-        return MEMITHyperParams, apply_memit_to_model, "MEMIT", ""
     elif "FT" in alg_name:
         d = {
             "FT": (FTHyperParams, apply_ft_to_model, "FT", "_unconstr"),
@@ -113,10 +108,14 @@ def load_alg(alg_name):
         }
         return d[alg_name]
     else:
+        from baselines.efk import EFKHyperParams, EfkRewriteExecutor
+        from baselines.kn import KNHyperParams, apply_kn_to_model
         from baselines.mend import MENDHyperParams, MendRewriteExecutor
 
         d = {
+            "KN": (KNHyperParams, apply_kn_to_model, "KN", ""),
             "MEND": (MENDHyperParams, MendRewriteExecutor().apply_to_model, "MEND", ""),
+            "KE": (EFKHyperParams, EfkRewriteExecutor().apply_to_model, "KE", ""),
             "MEND-CF": (
                 MENDHyperParams,
                 MendRewriteExecutor().apply_to_model,
@@ -128,6 +127,12 @@ def load_alg(alg_name):
                 MendRewriteExecutor().apply_to_model,
                 "MEND",
                 "_zsRE",
+            ),
+            "KE-CF": (
+                EFKHyperParams,
+                EfkRewriteExecutor().apply_to_model,
+                "MEND",
+                "_CF",
             ),
         }
         return d[alg_name]

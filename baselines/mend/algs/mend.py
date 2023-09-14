@@ -247,24 +247,16 @@ class MEND(EditableModel):
     def outer_parameters(self):
         return list(self.mend.parameters()) + [self.edit_lrs]
 
-    def edit(
-        self,
-        batch,
-        condition=None,
-        detach_history=False,
-        return_factors=False,
-        max_batch_size=128,
-    ):
+    def edit(self, batch, condition=None, detach_history=False, return_factors=False):
+        outputs = _logits(self.model(**batch))
+        loss = self.edit_loss_fn(outputs, batch["labels"])["nll"]
+
         names = set([n for n, p in self.model.named_parameters()])
         pset = set(self.config.model.inner_params)
         for p in pset:
             assert p in names, f"inner param {p} not in model"
 
-        for i in range(0, batch[next(iter(batch.keys()))].size(0), max_batch_size):
-            cur_batch = {k: v[i : i + max_batch_size] for k, v in batch.items()}
-            cur_outputs = _logits(self.model(**cur_batch))
-            cur_loss = self.edit_loss_fn(cur_outputs, cur_batch["labels"])["nll"]
-            cur_loss.backward()
+        loss.backward()
 
         if self.config.mend.shared:
             param_idx = (

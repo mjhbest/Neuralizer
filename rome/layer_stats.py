@@ -87,7 +87,6 @@ def layer_stats(
     batch_tokens=None,
     download=True,
     progress=tqdm,
-    force_recompute=False,
 ):
     """
     Function to load or compute cached stats.
@@ -142,7 +141,7 @@ def layer_stats(
     loader = tally(
         stat,
         ds,
-        cache=(filename if not force_recompute else None),
+        cache=filename,
         sample_size=sample_size,
         batch_size=batch_size,
         collate_fn=length_collation(batch_tokens),

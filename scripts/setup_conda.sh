@@ -16,22 +16,17 @@ esac
 
 if [ $machine != "Linux" ] && [ $machine != "Mac" ]
 then
-	echo "Conda setup script is only available on Linux and Mac."
+	echo "Conda setup script is only available on Linux and Mac"
 	exit 1
 else
-	echo "Running on $machine..."
+	echo "Running on $machine"
 fi
 
-if [[ -z "${CONDA_HOME}" ]]; then
-  echo "Please specify the CONDA_HOME environment variable (it might look something like ~/miniconda3)."
-  exit 1
-else
-  echo "Found CONDA_HOME=${CONDA_HOME}."
-fi
-
-RECIPE=${RECIPE:-memit}
+# Default RECIPE 'rome' can be overridden by 'RECIPE' environment variable
+RECIPE=${RECIPE:-rome}
+# Default ENV_NAME 'rome' can be overridden by 'ENV_NAME'
 ENV_NAME="${ENV_NAME:-${RECIPE}}"
-echo "Creating conda environment ${ENV_NAME}..."
+echo "Creating conda environment ${ENV_NAME}"
 
 if [[ ! $(type -P conda) ]]
 then
@@ -47,5 +42,26 @@ then
     exit 1
 fi
 
-# Build new environment
+CUDA_DIR="/usr/local/cuda-11.1"
+if [[ ! -d ${CUDA_DIR} ]]
+then
+    echo "Environment requires ${CUDA_DIR}, not found."
+    exit 1
+fi
+
+# Uninstall existing environment
+# conda deactivate
+rm -rf ~/.conda/envs/${ENV_NAME}
+
+# Build new environment: torch and torch vision from source
+# CUDA_HOME is needed
+# https://github.com/rusty1s/pytorch_scatter/issues/19#issuecomment-449735614
 conda env create --name=${ENV_NAME} -f ${RECIPE}.yml
+
+# Set up CUDA_HOME to set itself up correctly on every source activate
+# https://stackoverflow.com/questions/31598963
+mkdir -p ~/.conda/envs/${ENV_NAME}/etc/conda/activate.d
+echo "export CUDA_HOME=${CUDA_DIR}" > \
+    ~/.conda/envs/${ENV_NAME}/etc/conda/activate.d/CUDA_HOME.sh
+
+# conda activate ${ENV_NAME}

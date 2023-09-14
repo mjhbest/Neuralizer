@@ -26,7 +26,7 @@ def main(
 
         # Iterate through all case files
         cur_sum = collections.defaultdict(lambda: [])
-        files = list(run_dir.glob("*case_*.json"))
+        files = list(run_dir.glob("case_*.json"))
         files.sort(key=lambda x: int(str(x).split("_")[-1].split(".")[0]))
         for case_file in files:
             try:
@@ -39,8 +39,7 @@ def main(
             if first_n_cases is not None and case_id >= first_n_cases:
                 break
 
-            if "time" in data:
-                cur_sum["time"].append(data["time"])
+            cur_sum["time"].append(data["time"])
 
             for prefix in ["pre", "post"]:
                 # Probability metrics for which new should be lower (better) than true
@@ -90,7 +89,7 @@ def main(
                         )
                     )
 
-                # Accuracy-based evaluation metrics
+                # zsRE evaluation metrics
                 for key in ["rewrite", "paraphrase", "neighborhood"]:
                     sum_key = f"{prefix}_{key}_acc"
                     key = f"{key}_prompts_correct"
@@ -117,11 +116,6 @@ def main(
         uncompressed.append(dict(cur_sum, **metadata))
 
         cur_sum = {k: (np.mean(v), np.std(v)) for k, v in cur_sum.items()}
-        for k, v in cur_sum.items():
-            if all(exclude not in k for exclude in ["essence_score", "time"]):
-                # Constant multiplication scales linearly with mean and stddev
-                cur_sum[k] = tuple(np.around(z * 100, 2) for z in v)
-
         for prefix in ["pre", "post"]:
             for k_efficacy, k_generalization, k_specificity in [
                 (
@@ -129,26 +123,29 @@ def main(
                     f"{prefix}_paraphrase_success",
                     f"{prefix}_neighborhood_success",
                 ),
-                # (
-                #     f"{prefix}_rewrite_acc",
-                #     f"{prefix}_paraphrase_acc",
-                #     f"{prefix}_neighborhood_acc",
-                # ),
+                (
+                    f"{prefix}_rewrite_acc",
+                    f"{prefix}_paraphrase_acc",
+                    f"{prefix}_neighborhood_acc",
+                ),
             ]:
-                if all(k in cur_sum for k in [k_efficacy, k_generalization, k_specificity]):
-                    hmean_list = [
-                        cur_sum[k_efficacy][0],
-                        cur_sum[k_generalization][0],
-                        cur_sum[k_specificity][0],
-                    ]
-
-                    # if f"{prefix}_ngram_entropy" in cur_sum:
-                    #     hmean_list.append(2 ** (cur_sum[f"{prefix}_ngram_entropy"][0] / 100))
-                    # if f"{prefix}_reference_score" in cur_sum:
-                    #     hmean_list.append(cur_sum[f"{prefix}_reference_score"][0])
-
-                    cur_sum[f"{prefix}_score"] = (hmean(hmean_list), np.nan)
+                if k_generalization in cur_sum and k_specificity in cur_sum:
+                    cur_sum[f"{prefix}_score"] = (
+                        hmean(
+                            [
+                                cur_sum[k_efficacy][0],
+                                cur_sum[k_generalization][0],
+                                cur_sum[k_specificity][0],
+                            ]
+                        ),
+                        np.nan,
+                    )
                     break
+
+        for k, v in cur_sum.items():
+            if all(exclude not in k for exclude in ["essence_score", "time"]):
+                # Constant multiplication scales linearly with mean and stddev
+                cur_sum[k] = tuple(np.around(z * 100, 2) for z in v)
 
         cur_sum.update(metadata)
         pprint(cur_sum)

@@ -1,20 +1,26 @@
+import os
 from copy import deepcopy
-from typing import Dict, List, Tuple
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple
 
+import numpy as np
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
+# from rome.layer_stats import layer_stats
 from util import nethook
 from util.generate import generate_fast
+from util.globals import *
 
-from .compute_u import compute_u
-from .compute_v import compute_v
-from .rome_hparams import ROMEHyperParams
+# from .compute_u import compute_u
+# from .compute_v import compute_v, get_module_input_output_at_words, find_fact_lookup_idx
+# from .memit_hparams import MEMITHyperParams
+
 
 CONTEXT_TEMPLATES_CACHE = None
 
 
-def apply_rome_to_model(
+def apply_neuralyzer_to_model(
     model: AutoModelForCausalLM,
     tok: AutoTokenizer,
     requests: List[Dict],
@@ -56,7 +62,7 @@ def apply_rome_to_model(
     return model, weights_copy
 
 
-def execute_rome(
+def execute_neuralyzer(
     model: AutoModelForCausalLM,
     tok: AutoTokenizer,
     request: Dict,
@@ -97,7 +103,8 @@ def execute_rome(
             request,
             hparams,
             layer,
-            get_context_templates(model, tok, hparams.context_template_length_params),
+            get_context_templates(
+                model, tok, hparams.context_template_length_params),
         )
         print("Left vector shape:", left_vector.shape)
         right_vector: torch.Tensor = compute_v(
@@ -107,7 +114,8 @@ def execute_rome(
             hparams,
             layer,
             left_vector,
-            get_context_templates(model, tok, hparams.context_template_length_params),
+            get_context_templates(
+                model, tok, hparams.context_template_length_params),
         )
         print("Right vector shape:", right_vector.shape)
 
@@ -115,7 +123,8 @@ def execute_rome(
             # Determine correct transposition of delta matrix
             weight_name = f"{hparams.rewrite_module_tmp.format(layer)}.weight"
             upd_matrix = left_vector.unsqueeze(1) @ right_vector.unsqueeze(0)
-            upd_matrix = upd_matrix_match_shape(upd_matrix, weights[weight_name].shape)
+            upd_matrix = upd_matrix_match_shape(
+                upd_matrix, weights[weight_name].shape)
 
             # Update model weights and record desired changes in `delta` variable
             weights[weight_name][...] += upd_matrix

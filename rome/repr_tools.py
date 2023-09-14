@@ -132,7 +132,7 @@ def get_reprs_at_idxs(
         for i, idx_list in enumerate(batch_idxs):
             to_return[key].append(cur_repr[i][idx_list].mean(0))
 
-    for batch_contexts, batch_idxs in _batch(n=128):
+    for batch_contexts, batch_idxs in _batch(n=512):
         contexts_tok = tok(batch_contexts, padding=True, return_tensors="pt").to(
             next(model.parameters()).device
         )

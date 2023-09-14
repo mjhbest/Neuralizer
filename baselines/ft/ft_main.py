@@ -1,9 +1,9 @@
 from copy import deepcopy
 from typing import Any, Dict, List, Tuple
 
-import numpy as np
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
+
 from util import nethook
 
 from .ft_hparams import FTHyperParams
@@ -83,17 +83,10 @@ def execute_ft(
     targets = [r["target_new"]["str"] for r in requests]
 
     # Configure optimizer / gradients
-    wd = (
-        hparams.weight_decay
-        if not isinstance(hparams.wd_power_law, tuple)
-        else (len(requests) ** hparams.wd_power_law[0])
-        * np.exp(hparams.wd_power_law[1])
-    )
-    print(f"Using weight decay of {wd} for {len(requests)} edits")
     opt = torch.optim.Adam(
         [v for _, v in weights.items()],
         lr=hparams.lr,
-        weight_decay=wd,
+        weight_decay=hparams.weight_decay,
     )
     for name, w in model.named_parameters():
         w.requires_grad = name in weights

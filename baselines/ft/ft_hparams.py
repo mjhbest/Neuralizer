@@ -23,5 +23,4 @@ class FTHyperParams(HyperParams):
     lm_head_module: str
 
     # Defaults
-    batch_size: int = 64
-    wd_power_law: tuple = None  # Scale weight decay by number of edits
+    batch_size: int = 128

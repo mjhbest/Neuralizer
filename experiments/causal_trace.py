@@ -311,7 +311,6 @@ def calculate_hidden_flow(
     Runs causal tracing over every token/layer combination in the network
     and returns a dictionary numerically summarizing the results.
     """
-    # TODO fix the noise thing. base on the model.
     inp = make_inputs(mt.tokenizer, [prompt] * (samples + 1))
     with torch.no_grad():
         answer_t, base_score = [d[0] for d in predict_from_input(mt.model, inp)]
