@@ -18,7 +18,7 @@ class MENDQADataset:
 
     def __init__(self, data_dir: str, tok: AutoTokenizer, *args, **kwargs):
         data_dir = Path(data_dir)
-        zsre_loc = data_dir / "zsre_mend_eval.json"
+        zsre_loc = data_dir / "/zsre/zsre_mend_eval.json"
         if not zsre_loc.exists():
             print(f"{zsre_loc} does not exist. Downloading from {REMOTE_URL}")
             data_dir.mkdir(exist_ok=True, parents=True)
